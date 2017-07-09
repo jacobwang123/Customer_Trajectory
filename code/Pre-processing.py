@@ -23,13 +23,13 @@ df['map'] = df[cat_columns].apply(lambda x: x.cat.codes)
 print(df['brand'].nunique())
 
 df = df.sort(['mem_id','time'], ascending=True)
-boolean = df['time'] < datetime(year=2015, month=6, day=1)
+boolean = df['time'] < datetime(year=2015, month=5, day=1)
 df1 = df.loc[boolean, :]
 df2 = df.loc[~boolean, :]
 df1.to_csv('/Users/jacob/Desktop/Python/Guangxi Market/clean_data1.txt', float_format='%i', index=False)
 df2.to_csv('/Users/jacob/Desktop/Python/Guangxi Market/clean_data2.txt', float_format='%i', index=False)
 
-df = pd.read_csv('/Users/jacob/Desktop/Python/Guangxi Market/clean_data1.txt', sep=',', header=0)
+df = pd.read_csv('/Users/jacob/Desktop/Python/Guangxi Market/data/clean_data1.txt', sep=',', header=0)
 df['time'] = pd.to_datetime(df['time'])
 sequence = []
 user = df.mem_id.unique()
@@ -48,7 +48,7 @@ for i in user:
 				seq = move + [i]
 				sequence.append(seq)
 
-with open('/Users/jacob/Desktop/Python/Guangxi Market/job_data.txt', 'w') as f:
+with open('/Users/jacob/Desktop/Python/Guangxi Market/job/job_data_4.txt', 'w') as f:
 	for s in sequence:
 		line = ''
 		for i in s:

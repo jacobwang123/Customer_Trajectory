@@ -9,11 +9,14 @@ from __future__ import division, print_function, absolute_import
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 #import tensorflow as tf
 import tflearn
 from tflearn.data_utils import load_csv, pad_sequences
 
-padLen = 10
+padLen = 20
+dropout_rate = 0.8
+embedding_size = 256
 
 # def predict_as_txt(mem_ids, model, label, padLen):
 # 	df1 = pd.read_csv('/Users/jacob/Desktop/Python/Guangxi Market/clean_data1.txt', sep=',', header=0)
@@ -92,11 +95,11 @@ def predict_as_txt(model, label):
 		r = model.predict_label(input)
 		p = model.predict(input)
 		p[0].sort()
-		top5 = r[0][:5]
-		top5p = p[0][-5::]
+		top5 = r[0][:20]
+		top5p = p[0][-20::]
 		top5p = top5p[::-1]
 		s = str(index) + ':'
-		for i in range(0,5):
+		for i in range(0,20):
 			tb = map_df.loc[map_df['map']==top5[i], 'brand']
 			s = s + '(' + tb.values[0] + ',' + str(top5p[i]) + ');'
 		lines.append(s.rstrip(';'))
@@ -106,7 +109,7 @@ def predict_as_txt(model, label):
 			f.write(line + '\n')
 
 def main():
-	X, y = load_csv('/Users/jacob/Desktop/Python/Guangxi Market/job_data.txt',\
+	X, y = load_csv('/Users/jacob/Desktop/Python/Guangxi Market/job/job_data_5.txt',\
 					target_column=-1, has_header=False, categorical_labels=True, n_classes=3817)
 	# trainX, trainY, validX, validY, testX, testY = split_training_testing(X, y)
 
@@ -114,26 +117,28 @@ def main():
 	# trainX = np.array(trainX).astype('int32')
 	# validX = np.array(validX).astype('int32')
 	# testX = np.array(testX).astype('int32')
-	X = pad_sequences(X, maxlen=padLen, padding='pre', truncating='pre', dtype='int32')
+	X = pad_sequences(X, maxlen=padLen, padding='pre', truncating='pre', dtype='int16')
 
 	# Network building
-	net = tflearn.input_data([None, padLen])  # 3817*5
-	net = tflearn.embedding(net, input_dim=3817, output_dim=256)   # input_dim = 2204898
-	net = tflearn.lstm(net, 256, dropout=0.8)
-	net = tflearn.fully_connected(net, 3817, activation='softmax')
+	inputlayer = tflearn.input_data([None, padLen])  # 3817*5
+	embeddinglayer = tflearn.embedding(inputlayer, input_dim=3817, output_dim=embedding_size)   # input_dim = 2204898
+	lstmlayer = tflearn.lstm(embeddinglayer, embedding_size, dropout=dropout_rate)
+	denselayer = tflearn.fully_connected(lstmlayer, 3817, activation='softmax')
 	m = tflearn.optimizers.Adam(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08)
-	net = tflearn.regression(net, optimizer=m,\
+	finalayer = tflearn.regression(denselayer, optimizer=m,\
 							 loss='categorical_crossentropy', batch_size=256)
 
 	# Training
-	model = tflearn.DNN(net, tensorboard_verbose=0)
-	# model.fit(X, y, show_metric=True, n_epoch=10)#, validation_set=(validX, validY))
+	model = tflearn.DNN(finalayer, tensorboard_verbose=3, tensorboard_dir='/Users/jacob/Downloads/logs/')
+	model.fit(X, y, show_metric=True, n_epoch=10, run_id=str(dropout_rate)+'_'+str(embedding_size)+'_20')#, validation_set=(validX, validY))
 
 	# print(model.evaluate(testX, testY))
 
-	# model.save('/Users/jacob/Downloads/job_s' + str(padLen) + '.tflearn')
-	model.load('/Users/jacob/Downloads/job_s' + str(padLen) + '.tflearn')
-
+	model.save('/Users/jacob/Downloads/models/job_' + str(dropout_rate) + '_' + str(embedding_size) + '_20')
+	# model.load('/Users/jacob/Downloads/job_s' + str(padLen) + '.tflearn')
+	# W = model.get_weights(finalayer.W)
+	# plt.imshow(W[:, :100], cmap='hot', interpolation='nearest')
+	# plt.savefig('/Users/jacob/Downloads/test.pdf', format='pdf', dpi=5000)
 	# off_mem_ids = []
 	# on_mem_ids = []
 	# with open('/Users/jacob/Desktop/Python/Guangxi Market/data/original_offline.txt') as f1,\
@@ -155,7 +160,7 @@ def main():
 
 	# predict_as_txt(off_mem_ids, model, 'offline', padLen)
 	# predict_as_txt(on_mem_ids, model, 'online', padLen)
-	predict_as_txt(model, 'test')
+	# predict_as_txt(model, 'test')
 
 if __name__ == '__main__':
 	main()
